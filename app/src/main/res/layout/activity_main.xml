@@ -64,4 +64,14 @@
         android:layout_centerInParent="true"
         />
 
+    <ToggleButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/toggle"
+        android:layout_marginTop="20dp"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@+id/push_button"
+        android:textOff="Data Off"
+        android:textOn="Sending Data" />
+
 </RelativeLayout>

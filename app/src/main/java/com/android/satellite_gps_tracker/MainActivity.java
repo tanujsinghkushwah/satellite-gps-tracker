@@ -4,14 +4,14 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
-import android.app.Service;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -19,17 +19,15 @@ import android.content.pm.PackageManager;
 import android.location.GpsStatus;
 import android.location.Location;
 import android.location.LocationManager;
-import android.media.audiofx.Equalizer;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.CountDownTimer;
-import android.os.Handler;
 import android.provider.Settings;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
@@ -52,9 +50,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener, LocationListener, GpsStatus.Listener {
@@ -77,6 +72,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private String set_Latitude, set_Longitude;
     private Button push_button;
     String Android_ID;
+    ToggleButton toggle;
+    private static  final int REQUEST_CODE_LOCATION_PERMISSION = 1;
 
     @SuppressLint("Missing Permissions")
     @Override
@@ -88,6 +85,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         longitudeView = findViewById(R.id.longitudeView);
         push_button = findViewById(R.id.push_button);
         Android_ID = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+        toggle = findViewById(R.id.toggle);
 
         push_button.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -121,8 +119,65 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
         locationManager.addGpsStatusListener(this);
 
+        toggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(toggle.isChecked()){
+                    if(ContextCompat.checkSelfPermission(
+                            getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION
+                    ) != PackageManager.PERMISSION_GRANTED){
+                        ActivityCompat.requestPermissions(
+                                MainActivity.this,
+                                new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                                REQUEST_CODE_LOCATION_PERMISSION
+                        );
+                    } else{
+                        startLocationService();
+                    }
+                }
+                else {
+                    stopLocationService();
+                }
+            }
+        });
+
     }
 
+
+    private Boolean isLocationServiceRunning(){
+        ActivityManager activityManager =
+                (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        if(activityManager!=null){
+            for(ActivityManager.RunningServiceInfo service:
+                         activityManager.getRunningServices(Integer.MAX_VALUE)){
+                if(LocationService.class.getName().equals(service.service.getClassName())){
+                    if(service.foreground){
+                        return true;
+                    }
+                }
+            }
+            return  false;
+        }
+        return false;
+    }
+
+    private void startLocationService(){
+        if(!isLocationServiceRunning()){
+            Intent intent = new Intent(getApplicationContext(), LocationService.class);
+            intent.setAction(Constants.ACTION_START_LOCATION_SERVICE);
+            startService(intent);
+            Toast.makeText(this, "Location service started", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void stopLocationService(){
+        if(isLocationServiceRunning()){
+            Intent intent = new Intent(getApplicationContext(), LocationService.class);
+            intent.setAction(Constants.ACTION_STOP_LOCATION_SERVICE);
+            startService(intent);
+            Toast.makeText(this, "Location service stopped", Toast.LENGTH_SHORT).show();
+        }
+    }
 
     private void sendLocationData() {
 
