@@ -68,10 +68,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/toggle"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="40dp"
         android:layout_centerHorizontal="true"
         android:layout_below="@+id/push_button"
-        android:textOff="Data Off"
-        android:textOn="Sending Data" />
+        android:textOff="Location Update OFF"
+        android:textOn="Sending Location" />
 
 </RelativeLayout>

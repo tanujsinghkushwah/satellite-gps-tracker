@@ -15,13 +15,14 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.GpsStatus;
 import android.location.Location;
 import android.location.LocationManager;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.view.View;
 import android.widget.Button;
@@ -48,14 +49,11 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener, LocationListener, GpsStatus.Listener {
 
     private Location location;
-    private GpsStatus mGpsStatus;
     LocationManager locationManager = null;
     private GoogleApiClient googleApiClient;
     private static final int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
@@ -250,18 +248,35 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     @Override
     protected void onStart() {
         super.onStart();
-
+        toggle.setChecked(getDefaults("etatToggle",this));
         if (googleApiClient != null) {
             googleApiClient.connect();
         }
     }
 
     @Override
+    protected void onStop() {
+        super.onStop();
+        setDefaults("etatToggle", toggle.isChecked(), this);
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
+    }
 
-        if (!checkPlayServices()) {
-        }
+    public static void setDefaults(String key, Boolean value, Context context)
+    {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean(key, value);
+        editor.commit();
+    }
+
+    public static Boolean getDefaults(String key, Context context)
+    {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
+        return preferences.getBoolean(key, true);
     }
 
     @Override
