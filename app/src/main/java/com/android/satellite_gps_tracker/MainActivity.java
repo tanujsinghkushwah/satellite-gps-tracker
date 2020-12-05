@@ -5,8 +5,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
-
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
@@ -17,6 +15,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.location.GpsSatellite;
 import android.location.GpsStatus;
 import android.location.Location;
 import android.location.LocationManager;
@@ -24,12 +23,14 @@ import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
+import android.telephony.SmsManager;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
-
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -39,15 +40,14 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
@@ -68,10 +68,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     private TextView latitudeView, longitudeView;
     private String set_Latitude, set_Longitude;
-    private Button push_button;
+    private Button push_button, sms_alert;
     String Android_ID;
     ToggleButton toggle;
-    private static  final int REQUEST_CODE_LOCATION_PERMISSION = 1;
+    private static final int REQUEST_CODE_LOCATION_PERMISSION = 1;
+    String listSatellites;
+    EditText etName;
+    private final static int SEND_SMS_PERMISSION_REQ=1;
 
     @SuppressLint("Missing Permissions")
     @Override
@@ -82,8 +85,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         latitudeView = findViewById(R.id.latitudeView);
         longitudeView = findViewById(R.id.longitudeView);
         push_button = findViewById(R.id.push_button);
+        sms_alert = findViewById(R.id.SMS);
         Android_ID = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         toggle = findViewById(R.id.toggle);
+        etName = findViewById(R.id.etName);
+        sms_alert.setEnabled(false);
+
+        etName.setText(getIntent().getStringExtra("key_name"));
 
         push_button.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -120,56 +128,87 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         toggle.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(toggle.isChecked()){
-                    if(ContextCompat.checkSelfPermission(
+                if (toggle.isChecked()) {
+                    if (ContextCompat.checkSelfPermission(
                             getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION
-                    ) != PackageManager.PERMISSION_GRANTED){
+                    ) != PackageManager.PERMISSION_GRANTED) {
                         ActivityCompat.requestPermissions(
                                 MainActivity.this,
                                 new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                                 REQUEST_CODE_LOCATION_PERMISSION
                         );
-                    } else{
+                    } else {
                         startLocationService();
                     }
-                }
-                else {
+                } else {
                     stopLocationService();
                 }
             }
         });
 
+        if(checkPermission(Manifest.permission.SEND_SMS))
+        {
+            sms_alert.setEnabled(true);
+        }
+        else
+        {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.SEND_SMS}, SEND_SMS_PERMISSION_REQ);
+        }
+
+        sms_alert.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                    if(checkPermission(Manifest.permission.SEND_SMS))
+                    {
+                        SmsManager smsManager=SmsManager.getDefault();
+                        smsManager.sendTextMessage("+918106853856",null,"Latitude: "+set_Latitude
+                                +"\nLongitude: "+set_Longitude,null,null);
+                    }
+                    else {
+                        Toast.makeText(MainActivity.this, "Permission Denied", Toast.LENGTH_SHORT).show();
+                    }
+            }
+        });
+
+    }
+
+    private boolean checkPermission(String sendSms) {
+
+        int checkpermission= ContextCompat.checkSelfPermission(this,sendSms);
+        return checkpermission== PackageManager.PERMISSION_GRANTED;
     }
 
 
-    private Boolean isLocationServiceRunning(){
+    private Boolean isLocationServiceRunning() {
         ActivityManager activityManager =
                 (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-        if(activityManager!=null){
-            for(ActivityManager.RunningServiceInfo service:
-                         activityManager.getRunningServices(Integer.MAX_VALUE)){
-                if(LocationService.class.getName().equals(service.service.getClassName())){
-                    if(service.foreground){
+        if (activityManager != null) {
+            for (ActivityManager.RunningServiceInfo service :
+                    activityManager.getRunningServices(Integer.MAX_VALUE)) {
+                if (LocationService.class.getName().equals(service.service.getClassName())) {
+                    if (service.foreground) {
                         return true;
                     }
                 }
             }
-            return  false;
+            return false;
         }
         return false;
     }
 
-    private void startLocationService(){
-        if(!isLocationServiceRunning()){
+    private void startLocationService() {
+        if (!isLocationServiceRunning()) {
             Intent intent = new Intent(getApplicationContext(), LocationService.class);
+            intent.putExtra("Satellites", listSatellites);
+            intent.putExtra("Name", etName.getText().toString());
             intent.setAction(Constants.ACTION_START_LOCATION_SERVICE);
             startService(intent);
             Toast.makeText(this, "Location service started", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void stopLocationService(){
-        if(isLocationServiceRunning()){
+    private void stopLocationService() {
+        if (isLocationServiceRunning()) {
             Intent intent = new Intent(getApplicationContext(), LocationService.class);
             intent.setAction(Constants.ACTION_STOP_LOCATION_SERVICE);
             startService(intent);
@@ -179,10 +218,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     private void sendLocationData() {
 
-        final ProgressDialog loading = ProgressDialog.show(this,"Alerting!","Please wait");
+        final ProgressDialog loading = ProgressDialog.show(this, "Alerting!", "Please wait");
         final String Latitude = set_Latitude;
         final String Longitude = set_Longitude;
         final String phone_id = Android_ID;
+        final String Satellites = listSatellites;
+        final  String Name = etName.getText().toString();
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, "https://script.google.com/macros/s/AKfycbwEiAdi5EVdYppktzBgM0tISNZfjNPdAyO810zdnm-NF_7chaA/exec",
                 new Response.Listener<String>() {
@@ -190,8 +231,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     public void onResponse(String response) {
 
                         loading.dismiss();
-                        Toast.makeText(MainActivity.this,response,Toast.LENGTH_LONG).show();
-                        Intent intent = new Intent(getApplicationContext(),MainActivity.class);
+                        Toast.makeText(MainActivity.this, response, Toast.LENGTH_LONG).show();
+                        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                        intent.putExtra("key_name", etName.getText().toString());
                         startActivity(intent);
 
                     }
@@ -208,9 +250,11 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 Map<String, String> parmas = new HashMap<>();
 
                 //here we pass params
-                parmas.put("latitude",Latitude);
-                parmas.put("longitude",Longitude);
-                parmas.put("android_id",phone_id);
+                parmas.put("latitude", Latitude);
+                parmas.put("longitude", Longitude);
+                parmas.put("android_id", phone_id);
+                parmas.put("numSatellites", Satellites);
+                parmas.put("username", Name);
                 return parmas;
             }
         };
@@ -248,7 +292,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     @Override
     protected void onStart() {
         super.onStart();
-        toggle.setChecked(getDefaults("etatToggle",this));
+        toggle.setChecked(getDefaults("etatToggle", this));
         if (googleApiClient != null) {
             googleApiClient.connect();
         }
@@ -265,16 +309,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         super.onResume();
     }
 
-    public static void setDefaults(String key, Boolean value, Context context)
-    {
+    public static void setDefaults(String key, Boolean value, Context context) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         SharedPreferences.Editor editor = prefs.edit();
         editor.putBoolean(key, value);
         editor.commit();
     }
 
-    public static Boolean getDefaults(String key, Context context)
-    {
+    public static Boolean getDefaults(String key, Context context) {
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
         return preferences.getBoolean(key, true);
     }
@@ -284,35 +326,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         super.onPause();
 
         // stop location updates
-        if (googleApiClient != null  &&  googleApiClient.isConnected()) {
+        if (googleApiClient != null && googleApiClient.isConnected()) {
             LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, this);
             googleApiClient.disconnect();
         }
     }
 
-    private boolean checkPlayServices() {
-        GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
-        int resultCode = apiAvailability.isGooglePlayServicesAvailable(this);
-
-        if (resultCode != ConnectionResult.SUCCESS) {
-            if (apiAvailability.isUserResolvableError(resultCode)) {
-                apiAvailability.getErrorDialog(this, resultCode, PLAY_SERVICES_RESOLUTION_REQUEST);
-            } else {
-                finish();
-            }
-
-            return false;
-        }
-
-        return true;
-    }
-
-
     @Override
     public void onConnected(@Nullable Bundle bundle) {
         if (ActivityCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                &&  ActivityCompat.checkSelfPermission(this,
+                && ActivityCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
@@ -343,7 +367,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         if (ActivityCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                &&  ActivityCompat.checkSelfPermission(this,
+                && ActivityCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             Toast.makeText(this, "You need to enable permissions to display location !", Toast.LENGTH_SHORT).show();
         }
@@ -356,9 +380,52 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     }
 
+    public static String getGnssType(int prn) {
+        if (prn >= 1 && prn <= 32) {
+            return "NAVSTAR";
+        } else if (prn == 33) {
+            return "SBAS";
+        } else if (prn == 39) {
+            return "SBAS";
+        } else if (prn >= 40 && prn <= 41) {
+            return "SBAS";
+        } else if (prn == 46) {
+            return "SBAS";
+        } else if (prn == 48) {
+            return "SBAS";
+        } else if (prn == 49) {
+            return "SBAS";
+        } else if (prn == 51) {
+            return "SBAS";
+        } else if (prn >= 65 && prn <= 96) {
+            return "GLONASS";
+        } else if (prn >= 193 && prn <= 200) {
+            return "QZSS";
+        } else if (prn >= 201 && prn <= 235) {
+            return "BEIDOU";
+        } else if (prn >= 301 && prn <= 336) {
+            return "GALILEO";
+        } else {
+            return "UNKNOWN";
+        }
+    }
+
     @Override
     public void onGpsStatusChanged(int event) {
-
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        }
+        GpsStatus gpsStatus = locationManager.getGpsStatus(null);
+        if(gpsStatus != null) {
+            Iterable<GpsSatellite>satellites = gpsStatus.getSatellites();
+            Iterator<GpsSatellite> sat = satellites.iterator();
+            String lSatellites = "";
+            while (sat.hasNext()) {
+                GpsSatellite satellite = sat.next();
+                lSatellites += "("+satellite.getPrn()+")"+getGnssType(satellite.getPrn()) + ", ";
+                listSatellites = lSatellites;
+                Log.e("Satellite: ", listSatellites);
+            }
+        }
     }
 
     @Override
@@ -413,6 +480,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     }
                 }
 
+                break;
+            case SEND_SMS_PERMISSION_REQ:
+                if(grantResults.length>0 &&(grantResults[0]==PackageManager.PERMISSION_GRANTED))
+                {
+                    sms_alert.setEnabled(true);
+                }
                 break;
         }
     }

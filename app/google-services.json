@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "53223876575",
+    "firebase_url": "https://gpssatellitetracker.firebaseio.com",
+    "project_id": "gpssatellitetracker",
+    "storage_bucket": "gpssatellitetracker.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:53223876575:android:5bfbcfb3625c800e93466a",
+        "android_client_info": {
+          "package_name": "com.android.satellite_gps_tracker"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "53223876575-tthbboi3b8fhghusl9lud6m55raumv2g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDATb-xgA0e4SiIAXc-MpnTulgiDZc5ZcI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "53223876575-tthbboi3b8fhghusl9lud6m55raumv2g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

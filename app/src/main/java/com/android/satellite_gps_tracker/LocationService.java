@@ -3,7 +3,6 @@ package com.android.satellite_gps_tracker;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.app.ProgressDialog;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -11,12 +10,9 @@ import android.os.Build;
 import android.os.IBinder;
 import android.os.Looper;
 import android.provider.Settings;
-import android.util.Log;
 import android.widget.Toast;
-
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
-
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -29,11 +25,12 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-
 import java.util.HashMap;
 import java.util.Map;
 
-public class LocationService extends Service {
+public class LocationService extends Service implements gettingData {
+
+    String lSatellites, User_Name;
 
     private LocationCallback locationCallback = new LocationCallback(){
         @Override
@@ -59,6 +56,8 @@ public class LocationService extends Service {
         final String Latitude = String.valueOf(send_Latitude);
         final String Longitude = String.valueOf(send_Longitude);
         final String phone_id = ID;
+        final String Name_User = User_Name;
+        final String list_Satellites = lSatellites;
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, "https://script.google.com/macros/s/AKfycbzvBH76uNPsfTEHtYYoDU-Xw-87JVhMmS4ajwjMll4bVFjVZmQ/exec",
                 new Response.Listener<String>() {
@@ -66,6 +65,7 @@ public class LocationService extends Service {
                     public void onResponse(String response) {
                         Toast.makeText(LocationService.this,response,Toast.LENGTH_LONG).show();
                         Intent intent = new Intent(getApplicationContext(),MainActivity.class);
+                        intent.putExtra("key_name", User_Name);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         startActivity(intent);
 
@@ -86,6 +86,8 @@ public class LocationService extends Service {
                 parmas.put("latitude",Latitude);
                 parmas.put("longitude",Longitude);
                 parmas.put("android_id",phone_id);
+                parmas.put("Satellites", list_Satellites);
+                parmas.put("Name", Name_User);
                 return parmas;
             }
         };
@@ -155,6 +157,9 @@ public class LocationService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        lSatellites = intent.getExtras().getString("Satellites");
+        User_Name = intent.getExtras().getString("Name");
+
         if(intent != null){
             String action = intent.getAction();
             if(action!=null){

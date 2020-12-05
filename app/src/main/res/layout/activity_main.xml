@@ -23,7 +23,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="30dp"
+            android:layout_marginLeft="60dp"
             android:layout_marginTop="60dp"
             android:id="@+id/latitudeView"
             android:textSize="25sp"
@@ -73,5 +73,24 @@
         android:layout_below="@+id/push_button"
         android:textOff="Location Update OFF"
         android:textOn="Sending Location" />
+
+    <Button
+        android:id="@+id/SMS"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="SMS Location Alert"
+        android:layout_below="@+id/toggle"
+        android:layout_marginTop="20dp"
+        android:layout_centerHorizontal="true"/>
+
+    <EditText
+        android:id="@+id/etName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter your Name, Phone_Number and Email"
+        android:layout_marginTop="80dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:layout_below="@id/toggle"/>
 
 </RelativeLayout>
