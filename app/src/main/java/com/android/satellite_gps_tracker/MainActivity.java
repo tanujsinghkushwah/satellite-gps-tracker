@@ -51,7 +51,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener, LocationListener, GpsStatus.Listener {
+        GoogleApiClient.OnConnectionFailedListener, LocationListener, GpsStatus.Listener, RelativeDialog.ExampleDialogListener {
 
     private Location location;
     LocationManager locationManager = null;
@@ -68,7 +68,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     private TextView latitudeView, longitudeView;
     private String set_Latitude, set_Longitude;
-    private Button push_button, sms_alert;
+    private Button push_button, sms_alert, send_relative;
     String Android_ID;
     ToggleButton toggle;
     private static final int REQUEST_CODE_LOCATION_PERMISSION = 1;
@@ -86,10 +86,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         longitudeView = findViewById(R.id.longitudeView);
         push_button = findViewById(R.id.push_button);
         sms_alert = findViewById(R.id.SMS);
+        send_relative = findViewById(R.id.relative);
         Android_ID = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         toggle = findViewById(R.id.toggle);
         etName = findViewById(R.id.etName);
         sms_alert.setEnabled(false);
+        send_relative.setEnabled(false);
 
         etName.setText(getIntent().getStringExtra("key_name"));
 
@@ -149,6 +151,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if(checkPermission(Manifest.permission.SEND_SMS))
         {
             sms_alert.setEnabled(true);
+            send_relative.setEnabled(true);
         }
         else
         {
@@ -170,6 +173,30 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         });
 
+        send_relative.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openDialog();
+            }
+        });
+
+    }
+
+    public void openDialog() {
+        RelativeDialog exampleDialog = new RelativeDialog();
+        exampleDialog.show(getSupportFragmentManager(), "example dialog");
+    }
+    @Override
+    public void applyTexts(String relativeNum) {
+        if(checkPermission(Manifest.permission.SEND_SMS))
+        {
+            SmsManager smsManager=SmsManager.getDefault();
+            smsManager.sendTextMessage(relativeNum,null,"Latitude: "+set_Latitude
+                    +"\nLongitude: "+set_Longitude,null,null);
+        }
+        else {
+            Toast.makeText(MainActivity.this, "Permission Denied", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private boolean checkPermission(String sendSms) {
