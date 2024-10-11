@@ -1,4 +1,4 @@
 # Satellite_GPS_Tracker
 
-An app to track user by sending user location coordinates to an excel sheet using foreground service at continuous 
-fixed intervals along with Satellite data used for GPS fix, Device_ID. Also, a button provided to send alert in case of emergency for help.
+An Android app to track multiple users by sending user location coordinates to an Excel sheet using a foreground service at continuous 
+fixed intervals with Satellite data used for GPS fix, Device_ID. The emergency button can be used to alert sheet trackers to help notify first responders in case of an emergency.
